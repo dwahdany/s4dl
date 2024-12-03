@@ -1,0 +1,14 @@
+aiofiles==24.1.0
+aiohappyeyeballs==2.4.4
+aiohttp==3.11.9
+aiosignal==1.3.1
+attrs==24.2.0
+frozenlist==1.5.0
+idna==3.10
+multidict==6.1.0
+pip @ file:///home/conda/feedstock_root/build_artifacts/pip_1730203705538/work
+propcache==0.2.1
+setuptools==75.6.0
+tqdm==4.67.1
+wheel==0.45.1
+yarl==1.18.3

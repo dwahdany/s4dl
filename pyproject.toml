@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "s4dl"
+version = "0.1.0"
+description = "Simple async S3 downloader that handles pre-signed URLs"
+readme = "README.md"
+requires-python = ">=3.7"
+authors = [
+    { name = "Your Name" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "aiohttp",
+    "aiofiles",
+    "tqdm",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/s4dl"
+
+[project.scripts]
+s4dl = "s4dl.cli:main" 
