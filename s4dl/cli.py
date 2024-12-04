@@ -2,6 +2,7 @@ import asyncio
 import logging
 import ssl
 from pathlib import Path
+from typing import List
 
 import aiofiles
 import aiohttp
@@ -45,8 +46,14 @@ async def download_file(
             tmp_path.unlink()
 
 
-async def download_files(urls_file: str, output_dir: str = "./") -> None:
-    """Download files from URLs listed in a text file."""
+async def download_files(urls_file: str, output_dir: str = "./", max_concurrent: int = 10) -> None:
+    """Download files from URLs listed in a text file.
+    
+    Args:
+        urls_file: Path to file containing URLs to download
+        output_dir: Directory to save downloaded files
+        max_concurrent: Maximum number of concurrent downloads
+    """
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
@@ -61,13 +68,20 @@ async def download_files(urls_file: str, output_dir: str = "./") -> None:
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
 
-    tasks = []
-    connector = aiohttp.TCPConnector(ssl=ssl_context)
+    # Create semaphore to limit concurrent downloads
+    semaphore = asyncio.Semaphore(max_concurrent)
+    tasks: List[asyncio.Task] = []
+    
+    async def bounded_download(session: aiohttp.ClientSession, url: str, dest_path: Path) -> None:
+        async with semaphore:
+            await download_file(session, url, dest_path)
+
+    connector = aiohttp.TCPConnector(ssl=ssl_context, limit=max_concurrent)
     async with aiohttp.ClientSession(connector=connector) as session:
         for url in urls:
             filename = url.split("?")[0].split("/")[-1]
             dest_path = output_path / filename
-            task = download_file(session, url, dest_path)
+            task = asyncio.create_task(bounded_download(session, url, dest_path))
             tasks.append(task)
 
         for task in tqdm.as_completed(
@@ -92,9 +106,15 @@ def main():
         default="./",
         help="Directory to save downloaded files (default: current directory)",
     )
+    parser.add_argument(
+        "--max-concurrent",
+        type=int,
+        default=10,
+        help="Maximum number of concurrent downloads (default: 10)",
+    )
 
     args = parser.parse_args()
-    asyncio.run(download_files(args.urls_file, args.output_dir))
+    asyncio.run(download_files(args.urls_file, args.output_dir, args.max_concurrent))
 
 
 if __name__ == "__main__":
