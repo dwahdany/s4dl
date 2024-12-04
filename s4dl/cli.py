@@ -3,13 +3,30 @@ import logging
 import ssl
 from pathlib import Path
 from typing import List
+from datetime import datetime
 
 import aiofiles
 import aiohttp
 from tqdm.asyncio import tqdm
+from . import presign
+import typer
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+app = typer.Typer()
+
+def setup_logging(debug: bool = False):
+    """Configure logging level based on debug flag"""
+    level = logging.DEBUG if debug else logging.WARNING
+    logging.basicConfig(level=level)
+    logger.setLevel(level)
+
+@app.callback()
+def callback(
+    debug: bool = typer.Option(False, "--debug", help="Enable debug logging"),
+):
+    """S4DL - Simple S3 Download Utility"""
+    setup_logging(debug)
 
 
 async def download_file(
@@ -90,31 +107,69 @@ async def download_files(urls_file: str, output_dir: str = "./", max_concurrent:
             await task
 
 
-def main():
-    import argparse
+@app.command()
+def presign(
+    s3_path: str = typer.Argument(..., help="Full S3 path (e.g., s3://bucket/prefix/)"),
+    output: str = typer.Option(
+        None,
+        "-o",
+        "--output",
+        help="Output file (default: presigned_urls_<timestamp>.txt)",
+    ),
+    expiry: int = typer.Option(
+        604800,
+        "-e",
+        "--expiry",
+        help="URL expiry time in seconds (default: 604800)",
+    ),
+):
+    """Generate presigned URLs for S3 objects with a specific prefix"""
+    try:
+        if output is None:
+            output = f"presigned_urls_{datetime.now():%Y%m%d_%H%M%S}.txt"
 
-    parser = argparse.ArgumentParser(
-        description="Download files from pre-signed S3 URLs"
-    )
-    parser.add_argument(
-        "urls_file",
-        help="Text file containing one URL per line",
-    )
-    parser.add_argument(
-        "output_dir",
-        nargs="?",
-        default="./",
+        urls = asyncio.run(presign.presign_paths(s3_path, expiry))
+        
+        if not urls:
+            typer.echo("No objects found")
+            raise typer.Exit(0)
+            
+        with open(output, "w") as f:
+            for url in urls:
+                f.write(f"{url}\n")
+                
+        typer.echo(f"Presigned URLs have been written to {output}")
+        typer.echo(f"URLs will expire in {expiry} seconds")
+        
+    except Exception as e:
+        typer.echo(f"Error: {str(e)}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command()
+def download(
+    urls_file: str = typer.Argument(..., help="Text file containing one URL per line"),
+    output_dir: str = typer.Argument(
+        "./",
         help="Directory to save downloaded files (default: current directory)",
-    )
-    parser.add_argument(
+    ),
+    max_concurrent: int = typer.Option(
+        10,
         "--max-concurrent",
-        type=int,
-        default=10,
+        "-m",
         help="Maximum number of concurrent downloads (default: 10)",
-    )
+    ),
+):
+    """Download files from pre-signed S3 URLs"""
+    try:
+        asyncio.run(download_files(urls_file, output_dir, max_concurrent))
+    except Exception as e:
+        typer.echo(f"Error: {str(e)}", err=True)
+        raise typer.Exit(1)
 
-    args = parser.parse_args()
-    asyncio.run(download_files(args.urls_file, args.output_dir, args.max_concurrent))
+
+def main():
+    app()
 
 
 if __name__ == "__main__":
