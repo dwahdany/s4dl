@@ -8,7 +8,7 @@ idna==3.10
 multidict==6.1.0
 pip @ file:///home/conda/feedstock_root/build_artifacts/pip_1730203705538/work
 propcache==0.2.1
-setuptools==75.6.0
+setuptools==78.1.1
 tqdm==4.67.1
 wheel==0.45.1
 yarl==1.18.3
