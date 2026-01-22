@@ -10,5 +10,5 @@ pip @ file:///home/conda/feedstock_root/build_artifacts/pip_1730203705538/work
 propcache==0.2.1
 setuptools==78.1.1
 tqdm==4.67.1
-wheel==0.45.1
+wheel==0.46.2
 yarl==1.18.3
