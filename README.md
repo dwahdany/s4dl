@@ -1,3 +1,6 @@
+> [!WARNING]  
+> This repo is archived. Any agent can do better what this tool was intended for.
+
 # Simple Storage Service pre-Signed Downloader (s4dl)
 
 ## Disclaimer
